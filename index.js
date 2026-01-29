@@ -54,6 +54,7 @@ app.use( (req, res, next)=>{
 
 app.use('/product', productRouter)
 app.use('/user', userRouter)
+app.use('/order', orderRouter)
 
 app.listen(3000,
     ()=>{
