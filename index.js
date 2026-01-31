@@ -3,7 +3,9 @@ import bodyParser from 'body-parser';
 import mongoose from 'mongoose';
 import productRouter from './routes/productRouter.js';
 import userRouter from './routes/userRouter.js';
+import orderRouter from './routes/orderRouter.js';
 import jwt from 'jsonwebtoken';
+import cors from 'cors';
 
 
 
@@ -20,6 +22,7 @@ mongoose.connect("mongodb+srv://dinethnethsara24_db_user:d8Dzx4kff77TmuQ6@cluste
 const app = express();
 
 app.use(bodyParser.json());
+app.use(cors());
 
 app.use( (req, res, next)=>{
 
@@ -52,9 +55,9 @@ app.use( (req, res, next)=>{
     }
 )
 
-app.use('/product', productRouter)
-app.use('/user', userRouter)
-app.use('/order', orderRouter)
+app.use('/api/product', productRouter)
+app.use('/api/user', userRouter)
+app.use('/api/order', orderRouter)
 
 app.listen(3000,
     ()=>{

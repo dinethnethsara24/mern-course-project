@@ -20,3 +20,10 @@ export async function createOrder(req, res) {
 
     const lastOrder = await Order.find().sort({date : -1}).limit(1)
 }
+
+export function getOrders(req, res) {
+    Order.find().then((data) =>{
+        res.json(data)
+        
+    });
+}
