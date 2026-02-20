@@ -39,6 +39,11 @@ const orderSchema = mongoose.Schema({
         required : true
     },
 
+    labelledTotal : {  // Add this field to store labeled price total
+        type : Number,
+        required : true
+    },
+
     products : [
         {
             productInfo : {
@@ -53,20 +58,15 @@ const orderSchema = mongoose.Schema({
                 required : true
             },
 
-            altnames : [{
+            altNames : [{  // Fixed typo: altnames -> altNames to match Product schema
                 type : String,
             }],
-
-            description : {
-                type : String,
-                required : true
-            },
 
             images : [{
                 type : String
             }],
 
-            labeledPrice : {
+            labeledPrice : {  // Fixed: labeledPrice (single 'l') to match Product schema
                 type : Number,
                 required : true
             },
@@ -92,7 +92,5 @@ const orderSchema = mongoose.Schema({
     }
 })
 
-
 export const Order = mongoose.model("Orders", orderSchema);
-
 export default Order;
