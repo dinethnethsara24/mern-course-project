@@ -6,37 +6,49 @@ import axios from 'axios';
 import OTP from '../models/otp.js';
 
 
-export function getUser(req,res){
-    if(req.user == null){
+export function getUser(req, res) {
+    if (req.user == null) {
         res.status(403).json({
             message: "You are not authorized to view user details"
         })
         return
-    }else{
+    } else {
         res.json({
-         ...req.user //decompose the user object and send it as a response
+            ...req.user //decompose the user object and send it as a response
         })
     }
 }
 
+// Add this new function to get all users
+export function getAllUsers(req, res) {
+    if (req.user == null || req.user.role !== 'admin') {
+        res.status(403).json({ message: "You are not authorized to view all users" })
+        return
+    }
+
+    User.find({})
+        .then(users => { res.json(users) })
+        .catch(err => { res.status(500).json({ message: "Error fetching users", error: err }) })
+}
+
 export function createUser(req, res) {
 
-    if(req.body.user == "admin"){
+    if (req.body.user == "admin") {
 
-        if(req.user != null){
+        if (req.user != null) {
 
-            if(req.user.role != "admin"){
-                 res.status(403).json({
+            if (req.user.role != "admin") {
+                res.status(403).json({
                     message: "Only admin can create another admin user"
                 })
 
                 return;
-            }    
+            }
 
-        }else{
+        } else {
 
             res.status(403).json({
-                message : "You are not authorized to create admin user"
+                message: "You are not authorized to create admin user"
             })
 
             return;
@@ -48,31 +60,31 @@ export function createUser(req, res) {
 
     const hashedPassword = bcrypt.hashSync(req.body.password, 10);
 
-const user = new User({
-    email: req.body.email,
-    firstName: req.body.firstName,
-    lastName: req.body.lastName,
-    password: hashedPassword,
-    role: req.body.role,
-    isBlocked: req.body.isBlocked
-});
+    const user = new User({
+        email: req.body.email,
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
+        password: hashedPassword,
+        role: req.body.role,
+        isBlocked: req.body.isBlocked
+    });
 
-user.save().then(
-    
-    () => {
-        res.json({
-            message: "User created successfully"
-        })
-    }
-    
-).catch(
-    
-    () => {
-        res.json({
-            message: "User creation failed"
-        })
-    }
-)
+    user.save().then(
+
+        () => {
+            res.json({
+                message: "User created successfully"
+            })
+        }
+
+    ).catch(
+
+        () => {
+            res.json({
+                message: "User creation failed"
+            })
+        }
+    )
 }
 
 export function loginUser(req, res) {
@@ -80,46 +92,46 @@ export function loginUser(req, res) {
     const email = req.body.email;
     const password = req.body.password;
 
-    User.findOne({email : email}).then(
+    User.findOne({ email: email }).then(
 
         (user) => {
-            if(user == null) {
+            if (user == null) {
                 res.status(404).json({
-                    message : "User not found"
+                    message: "User not found"
                 });
             } else {
 
                 const isPasswordCorrect = bcrypt.compareSync(password, user.password);
 
-                if(isPasswordCorrect) {
+                if (isPasswordCorrect) {
 
                     const token = jwt.sign(
                         {
-                            email : user.email,
-                            firstName : user.firstName,
-                            lastName : user.lastName,
-                            role : user.role,
-                            img : user.img
+                            email: user.email,
+                            firstName: user.firstName,
+                            lastName: user.lastName,
+                            role: user.role,
+                            img: user.img
                         },
 
                         "secretkey"  //password to encrypt the JWTtoken
-                    )    
+                    )
 
                     res.status(200).json({
-                        message : "Login successful",
-                        token : token,
-                        role : user.role
+                        message: "Login successful",
+                        token: token,
+                        role: user.role
                     });
 
                 } else {
 
                     res.status(401).json({
-                        message : "Invalid password"
+                        message: "Invalid password"
                     });
                 }
             }
 
-        } 
+        }
     )
 }
 
@@ -128,140 +140,167 @@ export async function loginWithGoogle(req, res) {
 
     const token = req.body.accessToken;
 
-    if(token == null){
+    if (token == null) {
         res.status(400).json({
-            message : "Access token is required"
+            message: "Access token is required"
         });
-        return; 
+        return;
     }
 
     const response = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
-        headers : {
-            Authorization : `Bearer ${token}`
+        headers: {
+            Authorization: `Bearer ${token}`
         }
     })
 
     console.log(response.data)
 
     const user = await User.findOne({
-        email : response.data.email
+        email: response.data.email
 
     })
 
-    if(user == null){
+    if (user == null) {
         const newUser = new User(
             {
-                email : response.data.email,
-                firstName : response.data.given_name,
-                lastName : response.data.family_name,
-                password : "googleUser",
-                imgUrls : response.data.picture
+                email: response.data.email,
+                firstName: response.data.given_name,
+                lastName: response.data.family_name,
+                password: "googleUser",
+                img: response.data.picture
             }
         )
         await newUser.save();
 
         const token = jwt.sign(
             {
-                email : newUser.email,
-                firstName : newUser.firstName,
-                lastName : newUser.lastName,
-                role : newUser.role,
-                img : newUser.img
+                email: newUser.email,
+                firstName: newUser.firstName,
+                lastName: newUser.lastName,
+                role: newUser.role,
+                img: newUser.img
             },
 
             "secretkey"
         )
 
         res.json({
-            message : "Login successful",
-            token : token,
-            role : User.role
+            message: "Login successful",
+            token: token,
+            role: newUser.role
+        })
+    } else {
+        const token = jwt.sign(
+            {
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role,
+                img: user.img
+            },
+
+            "secretkey"
+        )
+
+        res.json({
+            message: "Login successful",
+            token: token,
+            role: user.role
         })
     }
 }
 
 const transport = nodemailer.createTransport({
-    service : "gmail",
-    host : "smtp.gmail.com",
-    port : 587,
-    secure : false,
-    auth : {
-        user : "dinethnethsaradev@gmail.com",
-        pass : "uwvrowxtekqmetnx"
+    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+        user: "dinethnethsaradev@gmail.com",
+        pass: "uwvrowxtekqmetnx"
     }
 })
 
-export async function sendOTP (req, res){
+export async function sendOTP(req, res) {
 
     const randomOTP = Math.floor(100000 + Math.random() * 900000);
     const email = req.body.email;
 
-    if(email == null){
+    if (email == null) {
         res.status(400).json({
-            message : "Email is required"
+            message: "Email is required"
         })
         return;
     }
 
-    const user =  await User.findOne({
-        email : email
+    const user = await User.findOne({
+        email: email
     })
-    if(user == null){
+    if (user == null) {
         res.status(404).json({
-            message : "User not found"
+            message: "User not found"
         })
         return;
     }
 
     //delete existing OTPs for the email
     await OTP.deleteMany({
-        email : email
+        email: email
     })
 
     const message = {
-        from : "dinethnethsaradev@gmail.com",
-        to : email,
-        subject : "Password Reset OTP",
-        text : `This is your OTP for password reset: ${randomOTP}`
-    }
+        from: '"Smart Tech Store" <dinethnethsaradev@gmail.com>',
+        to: email,
+        subject: "Reset Password OTP - Smart Tech Store",
+        html: `
+        <h3>Password Reset Request</h3>
+        <p>You requested to reset your password for <strong>Smart Tech Store</strong>.</p>
+        <p>Your OTP is:</p>
+        <h2 style="color:#2E86C1;">${randomOTP}</h2>
+        <p>Do not share it with anyone.</p>
+        <p>If you did not request this, please ignore this email.</p>
+        <br/>
+        <p>Thank you,<br/>Smart Tech Store Team</p>
+    `
+    };
 
     const otp = new OTP({
-        email : email,
-        otp : randomOTP
+        email: email,
+        otp: randomOTP
     })
     await otp.save();
 
     transport.sendMail(message, (err, info) => {
-        if(err){
-        res.status(500).json({
-            message : "Failed to send OTP",
-            error : err
-        })
-    } else {
-        res.status(200).json({
-            message : "OTP sent successfully",
-            otp : randomOTP
-        })
-    }
+        if (err) {
+            res.status(500).json({
+                message: "Failed to send OTP",
+                error: err
+            })
+        } else {
+            res.status(200).json({
+                message: "OTP sent successfully",
+                otp: randomOTP
+            })
+        }
     })
 }
 
-export async function resetPassword(req,res){
-    const otp  = req.body.otp
+export async function resetPassword(req, res) {
+    const otp = req.body.otp
     const email = req.body.email
     const newPassword = req.body.newPassword
     console.log(otp)
     const response = await OTP.findOne({
-        email : email
+        email: email
     })
-    
-    if(response==null){
+
+    if (response == null) {
         res.status(500).json({
-            message : "No otp requests found please try again"
+            message: "No otp requests found please try again"
         })
         return
     }
-    if(otp == response.otp){
+    if (otp == response.otp) {
         await OTP.deleteMany(
             {
                 email: email
@@ -271,29 +310,29 @@ export async function resetPassword(req,res){
 
         const hashedPassword = bcrypt.hashSync(newPassword, 10)
         const response2 = await User.updateOne(
-            {email : email},
+            { email: email },
             {
-                password : hashedPassword
+                password: hashedPassword
             }
         )
         res.json({
-            message : "password has been reset successfully"
+            message: "password has been reset successfully"
         })
-    }else{
+    } else {
         res.status(403).json({
-            meassage : "OTPs are not matching!"
+            meassage: "OTPs are not matching!"
         })
     }
-}   
-export function isAdmin(req){
+}
+export function isAdmin(req) {
 
-    if(req.user == null){
+    if (req.user == null) {
         return false;
     }
-    if(req.user.role != "admin"){
+    if (req.user.role != "admin") {
         return false;
     }
 
     return true;
-    
+
 }

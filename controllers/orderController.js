@@ -57,10 +57,10 @@ export async function createOrder(req, res) {
 				});
 				return;
 			}
-			
+
 			// Get quantity from request (use qty or quantity field)
 			const quantity = orderInfo.products[i].qty || orderInfo.products[i].quantity;
-			
+
 			// Validate quantity
 			// if (!quantity || isNaN(quantity) || quantity <= 0) {
 			// 	res.status(400).json({
@@ -68,19 +68,19 @@ export async function createOrder(req, res) {
 			// 	});
 			// 	return;
 			// }
-			
+
 			// Match Product schema field names
 			products[i] = {
-    productInfo: {
-        productId: item.productId,
-        name: item.productName,
-        altNames: item.altNames,
-        images: item.imgUrls,
-        labeledPrice: item.labeledPrice,
-        price: item.sellingPrice,
-        quantity: quantity,
-    }
-};
+				productInfo: {
+					productId: item.productId,
+					name: item.productName,
+					altNames: item.altNames,
+					images: item.imgUrls,
+					labeledPrice: item.labeledPrice,
+					price: item.sellingPrice,
+					quantity: quantity,
+				}
+			};
 			//total = total + (item.price * orderInfo.products[i].quantity)
 			total += item.sellingPrice * quantity;  // Changed from item.price to item.sellingPrice
 			//labelledTotal = labelledTotal + (item.labelledPrice * orderInfo.products[i].quantity)
@@ -150,21 +150,52 @@ export async function getOrders(req, res) {
 }
 
 export async function deleteOrder(req, res) {
-  const orderId = req.params.id;
+	const orderId = req.params.id;
 
-  try {
-    const order = await Order.findById(orderId);
+	try {
+		const order = await Order.findById(orderId);
 
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" });
-    }
+		if (!order) {
+			return res.status(404).json({ message: "Order not found" });
+		}
 
-    await Order.findByIdAndDelete(orderId);
+		await Order.findByIdAndDelete(orderId);
 
-    return res.status(200).json({ message: "Order deleted successfully" });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Server error" });
-  }
+		return res.status(200).json({ message: "Order deleted successfully" });
+	} catch (error) {
+		console.error(error);
+		return res.status(500).json({ message: "Server error" });
+	}
 }
-	
+
+export async function updateOrder(req, res) {
+	if (req.user == null) {
+		res.status(403).json({ message: "Please login and try again" });
+		return;
+	}
+
+	if (req.user.role !== "admin") {
+		res.status(403).json({ message: "Only admins can update orders" });
+		return;
+	}
+
+	const orderId = req.params.id;
+	const { status } = req.body;
+
+	try {
+		const order = await Order.findById(orderId);
+		if (!order) {
+			return res.status(404).json({ message: "Order not found" });
+		}
+
+		if (status) {
+			order.status = status;
+		}
+
+		await order.save();
+
+		res.json({ message: "Order updated successfully", order });
+	} catch (err) {
+		res.status(500).json({ message: "Failed to update order", error: err });
+	}
+}
